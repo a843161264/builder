@@ -1,0 +1,9 @@
+config BR2_PACKAGE_AP6PCM03_DEVICE
+	bool "ap6pcm03-device"
+	help
+	  Per-device files for the 360 AP6PCM03 camera (Ingenic T31X,
+	  GC4653 sensor, ATBM6031 SDIO wifi, GPIO-driven PTZ): the
+	  first-boot customizer that claims the device's pins and wifi
+	  profile, and its gpio.conf pin map.
+
+	  https://openipc.org
