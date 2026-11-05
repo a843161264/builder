@@ -1,0 +1,4 @@
+# The ATBM6031 hangs on MSC1 port A, while the family default is port B --
+# and port B collides with the GMAC this camera's Ethernet uses.
+# CONFIG_JZMMC_V12_MMC1_PB_4BIT is not set
+CONFIG_JZMMC_V12_MMC1_PA_4BIT=y

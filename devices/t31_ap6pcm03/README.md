@@ -24,11 +24,14 @@ bash builder.sh t31_ap6pcm03            # from the builder repo root
 
 What it carries beyond the defconfig:
 
-- `br-ext-chip-ingenic/board/t31/t31.ap6pcm03.config` and
-  `patches-ap6pcm03/0001-…` — the MSC1 port-A pin mux (the ATBM6031 hangs on
-  port A, while the stock kernel only offers PD/PB/PC, and PB collides with the
-  GMAC this camera's Ethernet uses) and the SD card-detect moved from GPIO 59
-  (PB27, which the IR-cut needs) to GPIO 61 (PB29);
+- `br-ext-chip-ingenic/board/t31/patches-ap6pcm03/0001-…` — the MSC1 port-A
+  pin mux (the ATBM6031 hangs on port A, while the stock kernel only offers
+  PD/PB/PC, and PB collides with the GMAC this camera's Ethernet uses) and the
+  SD card-detect moved from GPIO 59 (PB27, which the IR-cut needs) to GPIO 61
+  (PB29);
+- `br-ext-chip-ingenic/board/t31/t31.ap6pcm03.fragment` — two lines on top of
+  the stock `t31.generic.config` selecting the port-A mux, so upstream kernel
+  config changes still reach this board;
 - `package/ap6pcm03-device` — a local package installed by builder.sh into
   `general/package`: the first-boot customizer, `gpio.conf`, the ATBM power
   calibration files, and the WebUI `ptz-orient.js` post-build patch (the T31
@@ -37,13 +40,41 @@ What it carries beyond the defconfig:
   (ATBM6031 on MSC1 port A, power switch on GPIO 53);
 - `general/scripts/late-post-build-hooks.list` — registers the WebUI patch.
 
-The same changes also live in a firmware fork
-(`a843161264/firmware`) for building the tree directly
-(`make BOARD=t31_ap6pcm03`); point `OPENIPC_FW_REPO` at it to build from that
-tree instead, as `build-one.yml`'s `firmware_repo` input does.
+`.github/workflows/build-ap6pcm03.yml` builds this device on demand and uploads
+the `.tgz` as an artifact.
 
-`.github/workflows/build-ap6pcm03.yml` in this repository builds this device
-on demand and uploads the `.tgz` as an artifact.
+## Upstream updates
+
+Every build clones OpenIPC/firmware at its current HEAD and applies this
+directory over it, so upstream firmware, kernel, majestic and WebUI changes
+reach the image without anything to do here. The device's own changes are
+re-applied each time and stay in place.
+
+The kernel delta is a patch plus a two-line config fragment, so upstream
+`t31.generic.config` improvements come through too.
+
+Three files are mirrored wholesale and therefore shadow upstream if it changes
+them: the defconfig, `general/overlay/etc/wireless/sdio` and
+`general/scripts/late-post-build-hooks.list`. There is no fragment mechanism
+for those in builder.sh, so after a gap — or when a build fails for no obvious
+reason — run:
+
+```sh
+bash tools/check-ap6pcm03-upstream.sh
+```
+
+It clones the current upstream firmware and kernel, reports lines upstream has
+that the device copies lack, and checks that the kernel patch still applies.
+Merge what it flags into the device copies and re-run.
+
+## Fork route
+
+The same changes also live in a firmware fork (`a843161264/firmware`), where
+they are ordinary commits on top of upstream. Update that one with
+`git fetch upstream && git rebase upstream/master`; the kernel, defconfig and
+shared-file edits are diffs there rather than whole files, so upstream changes
+merge normally and any conflict is visible. Point the workflow's
+`firmware_repo` input at it to build from that tree.
 
 ## Notes from bring-up
 
