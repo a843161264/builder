@@ -1,0 +1,71 @@
+name: build-ap6pcm03
+
+# Builds one device on demand: 360 AP6PCM03 (Ingenic T31X).
+# The device directory is self-contained, so this works against upstream
+# firmware; point firmware_repo at a fork to build other changes with it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      firmware_repo:
+        description: 'Firmware repo to clone (default: OpenIPC/firmware)'
+        required: false
+        default: ''
+      firmware_ref:
+        description: 'Firmware ref (branch/tag/SHA); empty = default branch'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: t31_ap6pcm03
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout builder
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            automake autotools-dev bc build-essential cpio curl file git \
+            libncurses-dev libssl-dev libtool lzop make python3 python3-pip \
+            rsync tree unzip wget
+
+      - name: Build t31_ap6pcm03
+        env:
+          OPENIPC_FW_REPO: ${{ inputs.firmware_repo }}
+          OPENIPC_FW_REV: ${{ inputs.firmware_ref }}
+        run: |
+          # A unique stamp per build: sysupgrade skips the rootfs write when
+          # the running and candidate version strings are identical.
+          GIT_HASH="$(printf '%s' "${{ github.sha }}" | cut -c1-7)-$(date -u +%H%M)"
+          export GIT_HASH GIT_BRANCH="${{ github.ref_name }}"
+
+          mkdir -p /tmp/ccache
+          ln -sfn /tmp/ccache "$HOME/.ccache"
+
+          backoffs="60 300 900"
+          attempt=1
+          for sleep_for in $backoffs ""; do
+            rc=0
+            bash builder.sh t31_ap6pcm03 || rc=$?
+            [ ${rc} -eq 0 ] && break
+            if [ -z "$sleep_for" ]; then
+              echo "::error::build failed after ${attempt} attempts"
+              exit 1
+            fi
+            echo "::warning::attempt ${attempt} failed (rc=${rc}), retrying after ${sleep_for}s"
+            sleep "$sleep_for"
+            attempt=$((attempt + 1))
+          done
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: openipc-t31-ap6pcm03
+          path: archive/t31_ap6pcm03/**/*
+          if-no-files-found: error
