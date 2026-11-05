@@ -1,0 +1,58 @@
+diff --git a/arch/mips/xburst/soc-t31/chip-t31/isvp/Swan/board.h b/arch/mips/xburst/soc-t31/chip-t31/isvp/Swan/board.h
+index d9058e12..b02e271e 100644
+--- a/arch/mips/xburst/soc-t31/chip-t31/isvp/Swan/board.h
++++ b/arch/mips/xburst/soc-t31/chip-t31/isvp/Swan/board.h
+@@ -32,7 +32,7 @@
+ /* ****************************GPIO MMC START******************************** */
+ #define GPIO_MMC_RST_N			-1
+ #define GPIO_MMC_RST_N_LEVEL	LOW_ENABLE
+-#define GPIO_MMC_CD_N			GPIO_PB(27)
++#define GPIO_MMC_CD_N			GPIO_PB(29)
+ #define GPIO_MMC_CD_N_LEVEL		LOW_ENABLE
+ #define GPIO_MMC_PWR			-1
+ #define GPIO_MMC_PWR_LEVEL		HIGH_ENABLE
+diff --git a/arch/mips/xburst/soc-t31/common/platform.c b/arch/mips/xburst/soc-t31/common/platform.c
+index 2a271808..8aa15b43 100644
+--- a/arch/mips/xburst/soc-t31/common/platform.c
++++ b/arch/mips/xburst/soc-t31/common/platform.c
+@@ -43,6 +43,10 @@ struct jz_gpio_func_def platform_devio_array[] = {
+ 	MSC1_PORTC,
+ #endif
+ 
++#ifdef CONFIG_JZMMC_V12_MMC1_PA_4BIT
++	MSC1_PORTA,
++#endif
++
+ #ifdef CONFIG_I2C0_PA12_PA13
+ 	I2C0_PORTA,
+ #endif
+diff --git a/arch/mips/xburst/soc-t31/include/mach/platform.h b/arch/mips/xburst/soc-t31/include/mach/platform.h
+index e163702b..bf8c7e70 100755
+--- a/arch/mips/xburst/soc-t31/include/mach/platform.h
++++ b/arch/mips/xburst/soc-t31/include/mach/platform.h
+@@ -26,6 +26,12 @@
+ 	{ .name = "msc1-pB",		.port = GPIO_PORT_B, .func = GPIO_FUNC_1, .pins = (0x6f<<8), }, \
+ 	{ .name = "wyze-mmc-enable",	.port = GPIO_PORT_B, .func = GPIO_OUTPUT0, .pins = 0x8000, }, \
+ 	{ .name = "wyze-mmc-detect",	.port = GPIO_PORT_B, .func = GPIO_OUTPUT1, .pins = 0x40000000, }
++/* 360 AP6PCM03: ATBM6031 SDIO wifi on MSC1 port A. Pin mask and function
++ * taken from the vendor kernel's platform_devio_array: PA8-11 and PA16-17,
++ * device function 3. Shares no pin with SFC (PA23-28) or GMAC (port B). */
++#define MSC1_PORTA							\
++	{ .name = "msc1-pA",		.port = GPIO_PORT_A, .func = GPIO_FUNC_3, .pins = (0xf << 8) | (0x3 << 16), }
++
+ #define MSC1_PORTC							\
+ 	{ .name = "msc1-pC",		.port = GPIO_PORT_C, .func = GPIO_FUNC_0, .pins = (0x3f<<2), }
+ #define I2S_PORTC                           \
+diff --git a/drivers/mmc/host/Kconfig b/drivers/mmc/host/Kconfig
+index 61c50389..b3566326 100644
+--- a/drivers/mmc/host/Kconfig
++++ b/drivers/mmc/host/Kconfig
+@@ -62,6 +62,8 @@ config JZMMC_V12_MMC1_PD_4BIT
+ 	bool "GPIO D, Data width 4 bit"
+ config JZMMC_V12_MMC1_PB_4BIT
+ 	bool "GPIO B, Data width 4 bit"
++config JZMMC_V12_MMC1_PA_4BIT
++	bool "GPIO A, Data width 4 bit"
+ config JZMMC_V12_MMC1_PC_4BIT
+ 	bool "GPIO C, Data width 4 bit"
+ endchoice
